@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0d1110">
+    <title>Amortize In-Progress — Remaining Loan Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">In-Progress Loan Payoff Planner</p>
+          <h1>Map your remaining loan<br>from today forward.</h1>
+          <p class="hero-copy">Already making payments? Enter your current balance, monthly payment, and remaining months to instantly calculate your remaining amortization schedule, implied interest rate, and accelerated payoff path.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="icon-button" id="saveButton" type="button" aria-label="Save plan" title="Save plan">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+          </button>
+          <button class="icon-button" id="resetButton" type="button" aria-label="Reset plan" title="Reset plan">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 3v6h6"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="controls" aria-label="Remaining loan configuration">
+          <div class="loan-types" role="tablist" aria-label="Loan preset">
+            <button class="loan-type active" type="button" data-loan-type="home" role="tab" aria-selected="true">Home</button>
+            <button class="loan-type" type="button" data-loan-type="auto" role="tab" aria-selected="false">Auto</button>
+            <button class="loan-type" type="button" data-loan-type="personal" role="tab" aria-selected="false">Personal</button>
+          </div>
+
+          <div class="control-section">
+            <div class="calc-mode-wrap">
+              <span class="calc-mode-label">Calculation Mode</span>
+              <div class="calc-modes" role="group" aria-label="Calculation Mode">
+                <button type="button" class="mode-btn active" data-mode="solveRate" title="Solve implied interest rate from balance, payment, and months">Solve Rate</button>
+                <button type="button" class="mode-btn" data-mode="solvePayment" title="Solve monthly payment from balance, interest rate, and months">Solve Payment</button>
+                <button type="button" class="mode-btn" data-mode="solveMonths" title="Solve remaining months from balance, interest rate, and payment">Solve Months</button>
+              </div>
+            </div>
+
+            <p class="section-label">Current Loan Status</p>
+            <div class="control-list" id="loanControls"></div>
+
+            <div class="field-row-grid">
+              <label class="date-control" for="startDate">
+                <span>Next payment month</span>
+                <input id="startDate" type="month" value="2026-10">
+              </label>
+              <label class="date-control" for="priorPayments">
+                <span>Payments made so far</span>
+                <input id="priorPayments" type="number" min="0" max="600" step="1" value="0">
+              </label>
+            </div>
+          </div>
+
+          <div class="control-section extra-section">
+            <div class="section-heading">
+              <p class="section-label">Accelerated Payoff</p>
+              <span>Optional</span>
+            </div>
+            <div class="control-list" id="extraControls"></div>
+            <div class="invest-block" id="investBlock" hidden>
+              <p class="section-label invest-label">Investment Assumptions</p>
+              <div class="control-list" id="investControls"></div>
+            </div>
+          </div>
+
+          <label class="toggle-row">
+            <input id="autoSave" type="checkbox" checked>
+            <span>Save changes automatically</span>
+          </label>
+        </aside>
+
+        <section class="results" aria-label="Loan results">
+          <div class="alert-banner" id="warningBanner" hidden>
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-content">
+              <strong id="warningTitle">Payment insufficient</strong>
+              <p id="warningText">At this monthly payment and remaining term, the loan will not be fully paid off.</p>
+            </div>
+            <button type="button" id="fixPaymentBtn" class="pill-action-btn">Adjust Payment</button>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric highlight">
+              <span>Monthly payment</span>
+              <strong id="monthlyPayment">$0</strong>
+              <small id="paymentSubnote">Principal & interest</small>
+            </article>
+            <article class="metric">
+              <span>Implied interest rate</span>
+              <strong id="interestRateVal">0.00%</strong>
+              <small id="rateStatusNote">Calculated APR</small>
+            </article>
+            <article class="metric">
+              <span>Remaining payoff</span>
+              <strong id="payoffDate">—</strong>
+              <small id="payoffDuration">—</small>
+            </article>
+            <article class="metric">
+              <span>Remaining interest</span>
+              <strong id="totalInterest">$0</strong>
+              <small id="interestNote">Over remaining term</small>
+            </article>
+          </div>
+
+          <div class="insight-strip">
+            <div class="insight-mark">↗</div>
+            <p id="insightText">Enter your remaining loan details to see payoff trajectory and savings.</p>
+          </div>
+
+          <div class="chart-shell">
+            <div class="chart-header">
+              <div>
+                <p class="eyebrow">Remaining Balance Trajectory</p>
+                <h2>Balance to zero payoff</h2>
+              </div>
+              <div class="chart-legend">
+                <span><i class="gold-dot"></i>With extra payment</span>
+                <span><i class="line-dot"></i>Standard remaining</span>
+              </div>
+            </div>
+            <canvas id="balanceChart" width="1100" height="470" aria-label="Remaining balance chart"></canvas>
+          </div>
+
+          <section class="tradeoff-shell" id="tradeoffSection" hidden aria-label="Extra payment tradeoff">
+            <div class="chart-header">
+              <div>
+                <p class="eyebrow">Extra payment tradeoff</p>
+                <h2>Pay down loan vs. invest the difference</h2>
+              </div>
+              <p class="tradeoff-note" id="tradeoffNote"></p>
+            </div>
+            <div class="tradeoff-grid">
+              <article class="tradeoff-card">
+                <span class="tradeoff-tag">Extra principal</span>
+                <strong id="paydownPayoff">—</strong>
+                <small id="paydownSooner">—</small>
+                <ul class="tradeoff-list">
+                  <li><span>Total remaining interest</span><b id="paydownInterest">—</b></li>
+                  <li><span>Payoff date</span><b id="paydownDate">—</b></li>
+                </ul>
+              </article>
+              <article class="tradeoff-card">
+                <span class="tradeoff-tag">Invest the extra</span>
+                <strong id="investPayoff">—</strong>
+                <small id="investSooner">—</small>
+                <ul class="tradeoff-list">
+                  <li><span>Net portfolio at payoff</span><b id="investPortfolio">—</b></li>
+                  <li><span>Taxes on gains</span><b id="investTax">—</b></li>
+                  <li><span>Surplus after loan payoff</span><b id="investLeftover">—</b></li>
+                </ul>
+              </article>
+            </div>
+            <p class="tradeoff-verdict" id="tradeoffVerdict"></p>
+          </section>
+
+          <div class="table-shell">
+            <div class="chart-header table-header">
+              <div>
+                <p class="eyebrow">Payment Ledger</p>
+                <h2>Remaining monthly schedule</h2>
+              </div>
+              <div class="table-actions">
+                <select id="yearFilter" aria-label="Show year"></select>
+                <button id="downloadButton" type="button">Download CSV</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Payment</th>
+                    <th>Date</th>
+                    <th>Principal</th>
+                    <th>Interest</th>
+                    <th>Extra</th>
+                    <th>Remaining Balance</th>
+                  </tr>
+                </thead>
+                <tbody id="scheduleRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
