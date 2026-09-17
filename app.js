@@ -356,8 +356,33 @@ function investmentTradeoff() {
   return { month: standardPlan.length, date: dateForPayment(standardPlan.length), balance: 0, leftover: account.net, ...account };
 }
 
+function getInvestPlan() {
+  if (!state.extra || standardPlan.length === 0) return [];
+  const monthlyGrowth = Math.pow(1 + state.investReturn / 100, 1 / 12) - 1;
+  const taxRate = state.taxRate / 100;
+  let portfolio = 0;
+  let basis = 0;
+  const rows = [];
+  for (let m = 1; m <= standardPlan.length; m += 1) {
+    if (m >= state.extraStart) {
+      portfolio += state.extra;
+      basis += state.extra;
+    }
+    portfolio *= 1 + monthlyGrowth;
+    const taxes = taxRate * Math.max(0, portfolio - basis);
+    const netPortfolio = portfolio - taxes;
+    const stdBalance = standardPlan[m - 1].balance;
+    const netBalance = Math.max(0, stdBalance - netPortfolio);
+    rows.push({ payment: m, date: dateForPayment(m), balance: netBalance });
+    if (netPortfolio >= stdBalance) break;
+  }
+  return rows;
+}
+
 function renderTradeoff() {
   investBlock.hidden = tradeoffSection.hidden = !(state.extra > 0);
+  const investLegend = document.querySelector("#investLegend");
+  if (investLegend) investLegend.hidden = !(state.extra > 0);
   if (!state.extra || standardPlan.length === 0 || currentPlan.length === 0) return;
 
   const paydownMonths = currentPlan.length;
@@ -533,8 +558,9 @@ function drawChart() {
   const pad = { top: 25, right: 25, bottom: 38, left: 75 };
   const pw = width - pad.left - pad.right;
   const ph = height - pad.top - pad.bottom;
+  const investPlan = getInvestPlan();
   const max = Math.max(state.balance, 1);
-  const length = Math.max(standardPlan.length, currentPlan.length, 1);
+  const length = Math.max(standardPlan.length, currentPlan.length, investPlan.length, 1);
 
   // Y-axis grid
   ctx.strokeStyle = "rgba(231,215,168,.14)";
@@ -592,6 +618,9 @@ function drawChart() {
 
   line(standardPlan, "rgba(45,212,191,.72)", [7, 6], false);
   line(currentPlan, "#d8b45f", [], true);
+  if (investPlan.length > 0) {
+    line(investPlan, "#a78bfa", [5, 4], false);
+  }
 
   // X-axis labels
   ctx.fillStyle = "#b8b2a2";

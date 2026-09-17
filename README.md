@@ -17,6 +17,6 @@ A standalone, no-build web application designed specifically for loans where the
   - **Solve Months**: Computes remaining months from current balance, interest rate, and payment.
 - **Payoff Strategy & Accelerated Amortization**: Test extra monthly payments with a configurable start month.
 - **Investment Tradeoff Analysis**: Compare paying down extra principal versus investing the difference (with expected returns and capital gains tax).
-- **Interactive Balance Trajectory Chart**: High-resolution Canvas chart comparing the standard remaining balance payoff to your accelerated payoff strategy.
+- **Interactive Balance Trajectory Chart**: High-resolution Canvas chart comparing the standard remaining balance payoff, your accelerated payoff strategy, and the investing scenario.
 - **Payment Ledger & CSV Export**: Complete monthly table showing payment numbers, dates, principal, interest, extra payments, and remaining balance, filterable by year, with one-click CSV export.
 - **Presets & Local Persistence**: Includes Home, Auto, and Personal loan presets, with automatic LocalStorage saving and instant reset.
